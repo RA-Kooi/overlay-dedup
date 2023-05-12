@@ -1,0 +1,12 @@
+<!-- License: GPLv3 (See LICENSE at the root of this repository) -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<RootNamespace>overlay_dedup</RootNamespace>
+		<ImplicitUsings>false</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+</Project>
