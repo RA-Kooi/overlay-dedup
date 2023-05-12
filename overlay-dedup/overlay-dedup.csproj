@@ -7,6 +7,10 @@
 		<RootNamespace>overlay_dedup</RootNamespace>
 		<ImplicitUsings>false</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+		<PublishAot>true</PublishAot>
+		<PublishTrimmed>true</PublishTrimmed>
+		<StripSymbols>true</StripSymbols>
 	</PropertyGroup>
 
 	<ItemGroup>
