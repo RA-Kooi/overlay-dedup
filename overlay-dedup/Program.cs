@@ -1,11 +1,14 @@
 // vim: set ff=unix nobomb ts=4 sw=4
 // LICENSE: GPLv3 (See LICENSE in the root of this repository)
 
+using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
+using System.Linq;
 using System.IO;
 
 namespace overlay_dedup;
@@ -109,6 +112,22 @@ class Program
 						keepFiles,
 						secondColumnText: keepFiles.Description);
 				})
+			.UseExceptionHandler(
+				(ex, ctx) =>
+				{
+					Console.ForegroundColor = ConsoleColor.Red;
+
+					if(ex is DirectoryNotFoundException)
+					{
+						Console.Error.WriteLine($"ERROR: {ex.Message}");
+						return;
+					}
+
+					Console.Error.WriteLine(
+						$"Unhandled exception: {ex.GetType().ToString()}: "
+						+ $"{ex.Message}");
+					Console.Error.WriteLine(ex.StackTrace?.ToString());
+				}, 1)
 			.Build();
 
 		rootCmd.SetHandler(
@@ -120,6 +139,22 @@ class Program
 			 bool dryRun,
 			 bool verbose) =>
 			{
+				if(!lowerDir!.Exists)
+				{
+					throw new DirectoryNotFoundException(
+						"Lower directory does not exist");
+				}
+
+				if(!upperDir!.Exists)
+				{
+					throw new DirectoryNotFoundException(
+						"Upper directory does not exist");
+				}
+
+				ignoreDirs = ignoreDirs
+					.Select(dir => dir.TrimEnd('/'))
+					.ToArray();
+
 				Deduplicate(
 					lowerDir!,
 					upperDir!,
@@ -138,5 +173,182 @@ class Program
 			verbose);
 
 		return parser.Invoke(args);
+	}
+
+	static void Deduplicate(
+		DirectoryInfo lowerDir,
+		DirectoryInfo upperDir,
+		string[] ignoreDirs,
+		string[] keepFiles,
+		string backupExt,
+		bool dryRun,
+		bool verbose)
+	{
+		bool Recurse(string currentPath)
+		{
+			if(ignoreDirs.Contains(currentPath))
+			{
+				if(verbose)
+					Console.WriteLine($"Skipping ignored dir: {currentPath}\n");
+
+				return false;
+			}
+
+			DirectoryInfo currentUpper = new(upperDir.FullName + currentPath);
+			DirectoryInfo currentLower = new(lowerDir.FullName + currentPath);
+
+			HashSet<DirectoryInfo> upperDirs = currentUpper
+				.EnumerateDirectories()
+				.ToHashSet();
+
+			HashSet<DirectoryInfo> lowerDirs = currentLower
+				.EnumerateDirectories()
+				.ToHashSet();
+
+			IEnumerable<DirectoryInfo> bothDirs = upperDirs
+				.Intersect(lowerDirs, new FSNameComparer<DirectoryInfo>());
+
+			int dirCount = 0, removedDirCount = 0;
+			foreach(DirectoryInfo child in bothDirs)
+			{
+				dirCount++;
+
+				if(Recurse($"{currentPath}/{child.Name}"))
+					removedDirCount++;
+			}
+
+			HashSet<FileInfo> upperFiles = currentUpper
+				.EnumerateFiles()
+				.ToHashSet();
+
+			HashSet<FileInfo> lowerFiles = currentLower
+				.EnumerateFiles()
+				.ToHashSet();
+
+			IEnumerable<FileInfo> bothFiles = upperFiles
+				.Intersect(lowerFiles, new FSNameComparer<FileInfo>());
+
+			if(verbose)
+			{
+				string verbosePath = currentPath == "" ? "/" : currentPath;
+				Console.WriteLine($"In dir: {verbosePath}");
+			}
+
+			int fileCount = 0, removedFileCount = 0;
+			foreach(FileInfo child in bothFiles)
+			{
+				fileCount++;
+
+				FileInfo lowerFile = new FileInfo(
+					$"{currentLower.FullName}/{child.Name}");
+
+				FileInfo upperFile = new FileInfo(
+					$"{currentUpper.FullName}/{child.Name}");
+
+				if(verbose)
+				{
+					Console.WriteLine($"Child: {currentPath}/{child.Name}");
+
+					Console.WriteLine(
+						$"Child (lower): {lowerFile.FullName}, "
+						+ $"exists: {lowerFile.Exists}");
+
+					Console.WriteLine(
+						$"Child (upper): {upperFile.FullName}, "
+						+ $"exists: {upperFile.Exists}");
+				}
+
+				if(keepFiles.Contains($"{currentPath}/{child.Name}"))
+				{
+					string newPath = $"{upperFile.FullName}.{backupExt}";
+
+					if(dryRun)
+					{
+						Console.WriteLine(
+							$"Would copy {lowerFile.FullName} to {newPath}");
+					}
+					else
+					{
+						if(verbose)
+						{
+							Console.WriteLine(
+								$"Copying {lowerFile.FullName} to {newPath}");
+						}
+
+						lowerFile.CopyTo(newPath, true);
+					}
+
+					continue;
+				}
+
+				if(verbose)
+				{
+					long ftime = lowerFile.LastWriteTimeUtc.ToFileTimeUtc();
+					Console.WriteLine($"Modification time (lower): {ftime}");
+
+					ftime = upperFile.LastWriteTimeUtc.ToFileTimeUtc();
+					Console.WriteLine($"Modification time (upper): {ftime}");
+				}
+
+				if(lowerFile.LastWriteTimeUtc > upperFile.LastWriteTimeUtc)
+				{
+					if(dryRun)
+						Console.WriteLine($"Would remove: {upperFile.FullName}");
+					else
+					{
+						if(verbose)
+							Console.WriteLine($"Deleting: {upperFile.FullName}");
+
+						upperFile.Delete();
+					}
+
+					removedFileCount++;
+				}
+			}
+
+			if(upperFiles.Count == fileCount
+			   && removedFileCount == fileCount
+			   && upperDirs.Count == dirCount
+			   && removedDirCount == dirCount
+			   && currentPath != "")
+			{
+				if(verbose)
+					Console.WriteLine("");
+
+				if(dryRun)
+				{
+					Console.WriteLine($"Would delete dir: {currentUpper.FullName}");
+					return true;
+				}
+
+				try
+				{
+					if(verbose)
+						Console.WriteLine($"Deleting dir: {currentUpper.FullName}");
+
+					currentUpper.Delete();
+					return true;
+				}
+				catch(IOException)
+				{
+					Debug.Assert(
+						false,
+						$"Failed to delete <{currentUpper.FullName}> because it's "
+						+ "not empty");
+
+					return false;
+				}
+			}
+
+			if(verbose)
+				Console.WriteLine("");
+
+			return false;
+		}
+
+		if(verbose)
+			Console.WriteLine("Start deduplication:");
+
+		Recurse("");
 	}
 }
