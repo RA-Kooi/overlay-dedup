@@ -46,8 +46,17 @@ class Program
 			+ "their counter part in the lower directory.");
 		upperDir.Arity = ArgumentArity.ExactlyOne;
 
+		Argument<DirectoryInfo?> workDir = new(
+			name: "work dir",
+			description: "The work directory of the overlay.\n"
+			+ "All sub directories will be deleted in this directory.\n"
+			+ "Defaults to <{upper dir}/../work>.",
+			getDefaultValue: () => null);
+		workDir.Arity = ArgumentArity.ZeroOrOne;
+
 		rootCmd.AddArgument(lowerDir);
 		rootCmd.AddArgument(upperDir);
+		rootCmd.AddArgument(workDir);
 
 		Option<string[]> ignoreDirs = new(
 			aliases: new[]{"--ignore-dirs", "-i"},
@@ -133,6 +142,7 @@ class Program
 		rootCmd.SetHandler(
 			(DirectoryInfo? lowerDir,
 			 DirectoryInfo? upperDir,
+			 DirectoryInfo? workDir,
 			 string[] ignoreDirs,
 			 string[] keepFiles,
 			 string backupExt,
@@ -151,6 +161,17 @@ class Program
 						"Upper directory does not exist");
 				}
 
+				if(workDir == null)
+				{
+					workDir = new(upperDir.FullName + "/../work");
+				}
+
+				if(!workDir.Exists)
+				{
+					throw new DirectoryNotFoundException(
+						"Work directory does not exist");
+				}
+
 				ignoreDirs = ignoreDirs
 					.Select(dir => dir.TrimEnd('/'))
 					.ToArray();
@@ -163,9 +184,12 @@ class Program
 					backupExt,
 					dryRun,
 					verbose);
+
+				ClearWorkDir(workDir);
 			},
 			lowerDir,
 			upperDir,
+			workDir,
 			ignoreDirs,
 			keepFiles,
 			backupExt,
@@ -417,5 +441,18 @@ class Program
 
 		if(verbose)
 			Console.WriteLine("");
+	}
+
+	static void ClearWorkDir(DirectoryInfo workDir)
+	{
+		foreach(FileInfo child in workDir.EnumerateFiles())
+		{
+			child.Delete();
+		}
+
+		foreach(DirectoryInfo child in workDir.EnumerateDirectories())
+		{
+			child.Delete(true);
+		}
 	}
 }
