@@ -184,6 +184,8 @@ class Program
 		bool dryRun,
 		bool verbose)
 	{
+		RemoveEmptyDirs(upperDir, dryRun, verbose);
+
 		bool Recurse(string currentPath)
 		{
 			if(ignoreDirs.Contains(currentPath))
@@ -350,5 +352,70 @@ class Program
 			Console.WriteLine("Start deduplication:");
 
 		Recurse("");
+	}
+
+	static void RemoveEmptyDirs(
+		DirectoryInfo upperDir,
+		bool dryRun,
+		bool verbose)
+	{
+		bool Recurse(string currentPath)
+		{
+			DirectoryInfo currentDir = new(upperDir.FullName + currentPath);
+
+			int dirCount = 0, removedDirCount = 0;
+			foreach(DirectoryInfo child in currentDir.EnumerateDirectories())
+			{
+				++dirCount;
+
+				if(Recurse($"{currentPath}/{child.Name}"))
+					++removedDirCount;
+			}
+
+			int fileCount = currentDir.EnumerateFiles().Count();
+			if(fileCount > 0)
+				return false;
+
+			if(dirCount == removedDirCount)
+			{
+				if(verbose)
+					Console.WriteLine("");
+
+				if(dryRun)
+				{
+					Console.WriteLine($"Would delete dir: {currentDir.FullName}");
+					return true;
+				}
+
+				try
+				{
+					if(verbose)
+						Console.WriteLine($"Deleting dir: {currentDir.FullName}");
+
+					currentDir.Delete();
+					return true;
+				}
+				catch(IOException)
+				{
+					Debug.Assert(
+						false,
+						$"Failed to delete <{currentDir.FullName}>"
+						+ "because it's not empty");
+
+					return false;
+				}
+			}
+
+			return false;
+		}
+
+
+		if(verbose)
+			Console.WriteLine("Remove empty directories from upper dir:");
+
+		Recurse("");
+
+		if(verbose)
+			Console.WriteLine("");
 	}
 }
