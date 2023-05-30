@@ -311,7 +311,7 @@ class Program
 					Console.WriteLine($"Modification time (upper): {ftime}");
 				}
 
-				if(lowerFile.LastWriteTimeUtc > upperFile.LastWriteTimeUtc)
+				if(lowerFile.LastWriteTimeUtc >= upperFile.LastWriteTimeUtc)
 				{
 					if(dryRun)
 						Console.WriteLine($"Would remove: {upperFile.FullName}");
