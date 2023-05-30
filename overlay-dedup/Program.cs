@@ -275,13 +275,8 @@ class Program
 				{
 					Console.WriteLine($"Child: {currentPath}/{child.Name}");
 
-					Console.WriteLine(
-						$"Child (lower): {lowerFile.FullName}, "
-						+ $"exists: {lowerFile.Exists}");
-
-					Console.WriteLine(
-						$"Child (upper): {upperFile.FullName}, "
-						+ $"exists: {upperFile.Exists}");
+					Console.WriteLine($"Lower exists: {upperFile.Exists}");
+					Console.WriteLine($"Upper exists: {upperFile.Exists}");
 				}
 
 				if(keepFiles.Contains($"{currentPath}/{child.Name}"))
@@ -338,19 +333,16 @@ class Program
 			   && removedDirCount == dirCount
 			   && currentPath != "")
 			{
-				if(verbose)
-					Console.WriteLine("");
-
 				if(dryRun)
 				{
-					Console.WriteLine($"Would delete dir: {currentUpper.FullName}");
+					Console.WriteLine($"Would delete dir: {currentUpper.FullName}\n");
 					return true;
 				}
 
 				try
 				{
 					if(verbose)
-						Console.WriteLine($"Deleting dir: {currentUpper.FullName}");
+						Console.WriteLine($"Deleting dir: {currentUpper.FullName}\n");
 
 					currentUpper.Delete();
 					return true;
@@ -360,7 +352,7 @@ class Program
 					Debug.Assert(
 						false,
 						$"Failed to delete <{currentUpper.FullName}> because it's "
-						+ "not empty");
+						+ "not empty\n");
 
 					return false;
 				}
@@ -392,7 +384,7 @@ class Program
 			{
 				++dirCount;
 
-				if(Recurse($"{currentPath}/{child.Name}"))
+				if(Recurse($"{currentPath.TrimEnd('/')}/{child.Name}"))
 					++removedDirCount;
 			}
 
@@ -407,14 +399,19 @@ class Program
 
 				if(dryRun)
 				{
-					Console.WriteLine($"Would delete dir: {currentDir.FullName}");
+					Console.WriteLine(
+						$"Would delete dir: {upperDir.Name}{currentPath}");
+
 					return true;
 				}
 
 				try
 				{
 					if(verbose)
-						Console.WriteLine($"Deleting dir: {currentDir.FullName}");
+					{
+						Console.WriteLine(
+							$"Deleting dir: {upperDir.Name}{currentPath}");
+					}
 
 					currentDir.Delete();
 					return true;
@@ -437,7 +434,7 @@ class Program
 		if(verbose)
 			Console.WriteLine("Remove empty directories from upper dir:");
 
-		Recurse("");
+		Recurse("/");
 
 		if(verbose)
 			Console.WriteLine("");
