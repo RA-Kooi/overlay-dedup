@@ -10,6 +10,7 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Linq;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace overlay_dedup;
 
@@ -324,6 +325,53 @@ class Program
 					}
 
 					removedFileCount++;
+				}
+
+				if(lowerFile.Length == upperFile.Length)
+				{
+					if(verbose)
+					{
+						Console.WriteLine(
+							"Lower and upper are the same size, "
+							+ "doing hash check");
+					}
+
+					using (SHA256 lowerSha = SHA256.Create())
+					using (SHA256 upperSha = SHA256.Create())
+					using (FileStream lowerStream = lowerFile.Open(FileMode.Open))
+					using (FileStream upperStream = upperFile.Open(FileMode.Open))
+					{
+						lowerStream.Position = 0;
+						upperStream.Position = 0;
+						byte[] lowerHash = lowerSha.ComputeHash(lowerStream);
+						byte[] upperHash = upperSha.ComputeHash(upperStream);
+
+						if(lowerHash.SequenceEqual(upperHash))
+						{
+							if(verbose)
+								Console.WriteLine("Hashes equal, deleting...");
+
+							if(dryRun)
+							{
+								Console.WriteLine(
+									$"Would remove: {upperFile.FullName}");
+							}
+							else
+							{
+								if(verbose)
+								{
+									Console.WriteLine(
+										$"Deleting: {upperFile.FullName}");
+								}
+
+								upperFile.Delete();
+							}
+
+							removedFileCount++;
+						}
+						else if(verbose)
+							Console.WriteLine("Hashes are unique");
+					}
 				}
 			}
 
