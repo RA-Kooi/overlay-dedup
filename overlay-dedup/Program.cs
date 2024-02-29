@@ -325,6 +325,16 @@ class Program
 					}
 
 					removedFileCount++;
+					continue;
+				}
+
+				if(lowerFile.LinkTarget == upperFile.LinkTarget
+				   && lowerFile.LinkTarget != null)
+				{
+					if(verbose)
+						Console.WriteLine("Skipping identical symlink\n");
+
+					continue;
 				}
 
 				if(lowerFile.Length == upperFile.Length)
