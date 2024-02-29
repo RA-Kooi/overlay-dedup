@@ -209,7 +209,7 @@ class Program
 		bool dryRun,
 		bool verbose)
 	{
-		RemoveEmptyDirs(upperDir, dryRun, verbose);
+		RemoveEmptyDirs(upperDir, ignoreDirs, dryRun, verbose);
 
 		bool Recurse(string currentPath)
 		{
@@ -420,11 +420,20 @@ class Program
 
 	static void RemoveEmptyDirs(
 		DirectoryInfo upperDir,
+		string[] ignoreDirs,
 		bool dryRun,
 		bool verbose)
 	{
 		bool Recurse(string currentPath)
 		{
+			if(ignoreDirs.Contains(currentPath))
+			{
+				if(verbose)
+					Console.WriteLine($"\nSkipping ignored dir: {currentPath}");
+
+				return false;
+			}
+
 			DirectoryInfo currentDir = new(upperDir.FullName + currentPath);
 
 			int dirCount = 0, removedDirCount = 0;
