@@ -409,7 +409,8 @@ class Program
 			   && removedFileCount == fileCount
 			   && upperDirs.Count == dirCount
 			   && removedDirCount == dirCount
-			   && currentPath != "")
+			   && currentPath != ""
+			   && currentPath != "/")
 			{
 				if(dryRun)
 				{
