@@ -368,8 +368,8 @@ class Program
 
 					using (SHA256 lowerSha = SHA256.Create())
 					using (SHA256 upperSha = SHA256.Create())
-					using (FileStream lowerStream = lowerFile.Open(FileMode.Open))
-					using (FileStream upperStream = upperFile.Open(FileMode.Open))
+					using (FileStream lowerStream = lowerFile.Open(FileMode.Open, FileAccess.Read, FileShare.Read))
+					using (FileStream upperStream = upperFile.Open(FileMode.Open, FileAccess.Read, FileShare.Read))
 					{
 						lowerStream.Position = 0;
 						upperStream.Position = 0;
