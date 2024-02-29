@@ -339,6 +339,26 @@ class Program
 
 				if(lowerFile.Length == upperFile.Length)
 				{
+					if(lowerFile.Length == 0)
+					{
+						Statx stat;
+
+						libC.statx(
+							-1,
+							lowerFile.FullName,
+							0x800,              // AT_NO_AUTOMOUNT
+							1,                  // STATX_TYPE
+							out stat);
+
+						if((stat.Mode & 61440) == 49152)
+						{
+							if(verbose)
+								Console.WriteLine("Skipping socket\n");
+
+							continue;
+						}
+					}
+
 					if(verbose)
 					{
 						Console.WriteLine(
