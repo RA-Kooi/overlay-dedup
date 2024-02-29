@@ -287,14 +287,14 @@ class Program
 					if(dryRun)
 					{
 						Console.WriteLine(
-							$"Would copy {lowerFile.FullName} to {newPath}");
+							$"Would copy {lowerFile.FullName} to {newPath}\n");
 					}
 					else
 					{
 						if(verbose)
 						{
 							Console.WriteLine(
-								$"Copying {lowerFile.FullName} to {newPath}");
+								$"Copying {lowerFile.FullName} to {newPath}\n");
 						}
 
 						lowerFile.CopyTo(newPath, true);
@@ -315,11 +315,11 @@ class Program
 				if(lowerFile.LastWriteTimeUtc >= upperFile.LastWriteTimeUtc)
 				{
 					if(dryRun)
-						Console.WriteLine($"Would remove: {upperFile.FullName}");
+						Console.WriteLine($"Would remove: {upperFile.FullName}\n");
 					else
 					{
 						if(verbose)
-							Console.WriteLine($"Deleting: {upperFile.FullName}");
+							Console.WriteLine($"Deleting: {upperFile.FullName}\n");
 
 						upperFile.Delete();
 					}
@@ -354,14 +354,14 @@ class Program
 							if(dryRun)
 							{
 								Console.WriteLine(
-									$"Would remove: {upperFile.FullName}");
+									$"Would remove: {upperFile.FullName}\n");
 							}
 							else
 							{
 								if(verbose)
 								{
 									Console.WriteLine(
-										$"Deleting: {upperFile.FullName}");
+										$"Deleting: {upperFile.FullName}\n");
 								}
 
 								upperFile.Delete();
@@ -370,7 +370,7 @@ class Program
 							removedFileCount++;
 						}
 						else if(verbose)
-							Console.WriteLine("Hashes are unique");
+							Console.WriteLine("Hashes are unique\n");
 					}
 				}
 			}
